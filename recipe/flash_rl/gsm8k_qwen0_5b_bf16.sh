@@ -46,10 +46,10 @@ python3 -m verl.trainer.main_ppo \
     critic.model.fsdp_config.optimizer_offload=False \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
-    trainer.logger=['console','wandb'] \
+    trainer.logger=['console'] \
     trainer.project_name="${project_name}" \
     trainer.experiment_name="${exp_name}" \
-    trainer.n_gpus_per_node=4 \
+    trainer.n_gpus_per_node=1 \
     trainer.val_before_train=True \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
