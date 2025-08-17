@@ -615,6 +615,13 @@ class ActorRolloutRefWorker(Worker):
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def generate_sequences(self, prompts: DataProto):
+        prof = torch.profiler.profile(
+            activities=[
+                torch.profiler.ProfilerActivity.CPU,
+                torch.profiler.ProfilerActivity.CUDA,
+            ],
+        )
+        prof.start()
         # Support all hardwares
         prompts = prompts.to(get_torch_device().current_device())
 
@@ -646,10 +653,21 @@ class ActorRolloutRefWorker(Worker):
 
         # clear kv cache
         get_torch_device().empty_cache()
+        prof.stop()
+        prof.export_chrome_trace('vllm.json')
+        import sys
+        print(f'Saved vLLM profile', flush=True, file=sys.stderr)
         return output
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def compute_log_prob(self, data: DataProto):
+        prof = torch.profiler.profile(
+            activities=[
+                torch.profiler.ProfilerActivity.CPU,
+                torch.profiler.ProfilerActivity.CUDA,
+            ],
+        )
+        prof.start()
         # when is_lora is True, we use the actor without lora applied to calculate the log_prob
         # which is mostly used for ref log_prob calculation
         assert self._is_actor
@@ -688,6 +706,11 @@ class ActorRolloutRefWorker(Worker):
         if self._is_offload_param:
             offload_fsdp_model_to_cpu(self.actor_module_fsdp)
             log_gpu_memory_usage("After offload actor model during compute_log_prob", logger=logger)
+
+        prof.stop()
+        prof.export_chrome_trace('fsdp.json')
+        import sys
+        print(f'Saved FSDP profile', flush=True, file=sys.stderr)
 
         return output
 
